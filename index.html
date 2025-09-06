@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dd iyang Music - Functional Player</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --pastel-pink: #ffd1dc;
+            --pastel-mint: #d1ffdc;
+            --pastel-lavender: #e6e6ff;
+            --pastel-blue: #d1e3ff;
+            --soft-purple: #d8c1ff;
+            --accent-pink: #ff9eb7;
+            --accent-blue: #9ed2ff;
+            --accent-purple: #c5a3ff;
+            --text-dark: #5a5a7a;
+            --text-light: #ffffff;
+            --shadow: 0 4px 20px rgba(149, 125, 173, 0.2);
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, var(--pastel-pink), var(--pastel-lavender));
+            color: var(--text-dark);
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            touch-action: manipulation;
+        }
+
+        /* Floating emojis */
+        .emoji {
+            position: absolute;
+            font-size: 2rem;
+            opacity: 0.7;
+            animation: float 8s infinite ease-in-out;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0) rotate(0); }
+            25% { transform: translateY(-20px) translateX(10px) rotate(10deg); }
+            50% { transform: translateY(-40px) translateX(-10px) rotate(-10deg); }
+            75% { transform: translateY(-20px) translateX(-5px) rotate(5deg); }
+        }
+
+        .app-container {
+            max-width: 480px;
+            height: 100vh;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-header {
+            padding: 20px 15px 10px;
+            background: linear-gradient(to right, var(--accent-pink), var(--accent-purple));
+            color: var(--text-light);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .app-header h1 {
+            font-family: 'Comic Neue', cursive;
+            font-weight: 700;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .app-header h1:hover {
+            transform: translateY(-3px);
+        }
+
+        .back-button {
+            position: absolute;
+            left: 15px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+            transform: scale(1);
+        }
+
+        .back-button:hover {
+            transform: translateX(-3px) scale(1.1);
+        }
+
+        .back-button:active {
+            transform: translateX(-3px) scale(0.9);
+        }
+
+        .app-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 15px;
+            position: relative;
+            z-index: 5;
+        }
+
+        /* Hide scrollbar but keep functionality */
+        .app-content::-webkit-scrollbar {
+            width: 0;
+            background: transparent;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Home page styles */
+        .welcome-container {
+            text-align: center;
+            padding: 15px 0;
+        }
+
+        .typing-text {
+            font-family: 'Comic Neue', cursive;
+            font-size: 1.3rem;
+            color: var(--accent-purple);
+            min-height: 60px;
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            position: relative;
+            transform: scale(1);
+            transition: transform 0.3s ease;
+        }
+
+        .typing-text:hover {
+            transform: scale(1.02);
+        }
+
+        .typing-text::after {
+            content: "|";
+            animation: blink 1s infinite;
+            color: var(--accent-pink);
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .now-playing {
+            background: white;
+            border-radius: 20px;
+            padding: 15px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            box-shadow: var(--shadow);
+            transform: translateY(0);
+            transition: all 0.3s ease;
+        }
+
+        .now-playing:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(149, 125, 173, 0.3);
+        }
+
+        .now-playing-cover {
+            width: 70px;
+            height: 70px;
+            border-radius: 15px;
+            background: linear-gradient(to right, var(--accent-blue), var(--accent-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.8rem;
+            margin-right: 15px;
+            flex-shrink: 0;
+            overflow: hidden;
+            transform: rotate(0);
+            transition: transform 0.5s ease;
+        }
+
+        .now-playing:hover .now-playing-cover {
+            transform: rotate(10deg);
+        }
+
+        .now-playing-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .now-playing-info {
+            flex: 1;
+        }
+
+        .now-playing-info h3 {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .now-playing-info p {
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .now-playing-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .now-playing-controls button {
+            background: var(--accent-pink);
+            color: white;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            transform: scale(1);
+        }
+
+        .now-playing-controls button:hover {
+            transform: scale(1.1);
+            background: var(--accent-purple);
+        }
+
+        .now-playing-controls button:active {
+            transform: scale(0.9);
+        }
+
+        .daily-message {
+            background: linear-gradient(to right, var(--pastel-blue), var(--pastel-mint));
+            border-radius: 20px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+            font-family: 'Comic Neue', cursive;
+            font-size: 1.2rem;
+            color: var(--text-dark);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+            transform: scale(1);
+            transition: transform 0.3s ease;
+        }
+
+        .daily-message:active {
+            transform: scale(0.98);
+        }
+
+        .daily-message::before {
+            content: "";
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            background: linear-gradient(45deg, 
+                transparent 25%, 
+                rgba(255,255,255,0.3) 25%, 
+                rgba(255,255,255,0.3) 50%, 
+                transparent 50%, 
+                transparent 75%, 
+                rgba(255,255,255,0.3) 75%);
+            background-size: 20px 20px;
+            opacity: 0.3;
+            animation: shine 2s linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-20px); }
+            100% { transform: translateX(0); }
+        }
+
+        .daily-message-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Search page styles */
+        .search-container {
+            padding: 10px 0;
+        }
+
+        .search-box {
+            display: flex;
+            background: white;
+            border-radius: 30px;
+            padding: 10px 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            transform: scale(1);
+            transition: transform 0.3s ease;
+        }
+
+        .search-box:active {
+            transform: scale(0.98);
+        }
+
+        .search-box input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.1rem;
+            padding: 5px;
+            outline: none;
+            color: var(--text-dark);
+        }
+
+        .search-box button {
+            background: transparent;
+            border: none;
+            color: var(--accent-purple);
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .search-box button:hover {
+            transform: scale(1.1);
+        }
+
+        .search-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .search-bubble {
+            background: white;
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            transform: scale(1);
+        }
+
+        .search-bubble:hover {
+            background: var(--accent-pink);
+            color: white;
+            transform: translateY(-3px) scale(1.05);
+        }
+
+        .search-bubble:active {
+            transform: translateY(0) scale(0.95);
+        }
+
+        .mood-playlists {
+            margin-top: 20px;
+        }
+
+        .mood-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: var(--accent-purple);
+            font-weight: 600;
+            transform: translateX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .mood-title:hover {
+            transform: translateX(5px);
+        }
+
+        .mood-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .mood-card {
+            background: white;
+            border-radius: 20px;
+            padding: 15px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            text-align: center;
+            aspect-ratio: 1/1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transform: scale(1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mood-card:hover {
+            transform: translateY(-5px) scale(1.03);
+            box-shadow: 0 8px 25px rgba(149, 125, 173, 0.3);
+        }
+
+        .mood-card:active {
+            transform: translateY(0) scale(0.97);
+        }
+
+        .mood-card::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, transparent 0%, rgba(255,255,255,0.3) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .mood-card:hover::after {
+            opacity: 1;
+        }
+
+        .mood-card i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: var(--accent-pink);
+            transform: scale(1);
+            transition: transform 0.3s ease;
+        }
+
+        .mood-card:hover i {
+            transform: scale(1.2);
+        }
+
+        .mood-card h3 {
+            font-size: 1rem;
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .mood-card:hover h3 {
+            transform: translateY(3px);
+        }
+
+        /* Mood playlist pages */
+        .mood-playlist-page {
+            display: none;
+            animation: slideIn 0.4s ease forwards;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .mood-playlist-page.active {
+            display: block;
+        }
+
+        .mood-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 15px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .mood-header:hover {
+            transform: translateY(-3px);
+        }
+
+        .mood-header i {
+            font-size: 3rem;
+            margin-right: 15px;
+            color: var(--accent-pink);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .mood-header h2 {
+            font-size: 1.5rem;
+            color: var(--text-dark);
+        }
+
+        .mood-songs-list {
+            margin-bottom: 20px;
+        }
+
+        .song-card {
+            background: white;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            transform: scale(1);
+            position: relative;
+        }
+
+        .song-card:hover {
+            transform: translateX(5px) scale(1.02);
+        }
+
+        .song-card:active {
+            transform: translateX(0) scale(0.98);
+        }
+
+        .album-art {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            background: linear-gradient(to right, var(--accent-blue), var(--accent-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-right: 15px;
+            flex-shrink: 0;
+            overflow: hidden;
+            transform: rotate(0);
+            transition: transform 0.5s ease;
+        }
+
+        .song-card:hover .album-art {
+            transform: rotate(10deg);
+        }
+
+        .album-art img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .song-info {
+            flex: 1;
+        }
+
+        .song-info h3 {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            color: var(--text-dark);
+            transform: translateX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .song-card:hover .song-info h3 {
+            transform: translateX(5px);
+        }
+
+        .song-info p {
+            font-size: 0.9rem;
+            color: #888;
+            transform: translateX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .song-card:hover .song-info p {
+            transform: translateX(5px);
+        }
+
+        .play-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--accent-pink);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(255, 158, 183, 0.4);
+            transform: scale(1);
+        }
+
+        .play-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 15px rgba(255, 158, 183, 0.6);
+            background: var(--accent-purple);
+        }
+
+        .play-btn:active {
+            transform: scale(0.9);
+        }
+
+        .youtube-player {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border-radius: 15px;
+            margin-top: 15px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .youtube-player iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Player bar */
+        .player-bar {
+            position: fixed;
+            bottom: 70px;
+            left: 0;
+            right: 0;
+            max-width: 480px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+            z-index: 20;
+            transform: translateY(100px);
+            transition: transform 0.4s ease;
+        }
+
+        .player-bar.active {
+            transform: translateY(0);
+        }
+
+        .player-art {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            background: linear-gradient(to right, var(--accent-blue), var(--accent-purple));
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            overflow: hidden;
+            animation: rotateAlbumArt 3s linear infinite;
+            animation-play-state: paused;
+        }
+
+        .player-bar.active .player-art {
+            animation-play-state: running;
+        }
+
+        @keyframes rotateAlbumArt {
+            0% { transform: rotate(0); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .player-art img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .player-info {
+            flex: 1;
+        }
+
+        .player-info h4 {
+            font-size: 1rem;
+            margin-bottom: 3px;
+        }
+
+        .player-info p {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .player-controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        .player-controls button {
+            background: transparent;
+            border: none;
+            color: var(--accent-pink);
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            transform: scale(1);
+        }
+
+        .player-controls button:hover {
+            transform: scale(1.1);
+            color: var(--accent-purple);
+        }
+
+        .player-controls button:active {
+            transform: scale(0.9);
+        }
+
+        /* Navigation */
+        .nav-bar {
+            display: flex;
+            background: white;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-width: 480px;
+            margin: 0 auto;
+            z-index: 100;
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 0;
+            text-decoration: none;
+            color: #aaa;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            transform: scale(1);
+            position: relative;
+        }
+
+        .nav-item::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 3px;
+            background: var(--accent-pink);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+
+        .nav-item:hover::after {
+            width: 30px;
+        }
+
+        .nav-item i {
+            font-size: 1.4rem;
+            margin-bottom: 5px;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-item:hover i {
+            transform: translateY(-3px);
+        }
+
+        .nav-item.active {
+            color: var(--accent-purple);
+            transform: translateY(-5px) scale(1.1);
+        }
+
+        .nav-item.active i {
+            color: var(--accent-pink);
+            animation: bounce 0.5s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .nav-item.active::after {
+            width: 30px;
+        }
+
+        .nav-item:not(.active):hover {
+            color: var(--accent-blue);
+        }
+
+        /* Sparkle animation */
+        .sparkle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #fff;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            animation: sparkle 1s ease-out;
+        }
+
+        @keyframes sparkle {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        /* Heart animation */
+        .heart {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0;
+            animation: heartFloat 4s ease-out;
+            font-size: 1.5rem;
+            color: var(--accent-pink);
+        }
+
+        @keyframes heartFloat {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) rotate(20deg);
+                opacity: 0;
+            }
+        }
+
+        /* Music note animation */
+        .music-note {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0;
+            animation: noteFloat 3s ease-out;
+            font-size: 1.2rem;
+            color: var(--accent-purple);
+        }
+
+        @keyframes noteFloat {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-80px) rotate(15deg);
+                opacity: 0;
+            }
+        }
+
+        /* Cooking Mama style feedback */
+        .feedback {
+            position: absolute;
+            pointer-events: none;
+            font-family: 'Comic Neue', cursive;
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: var(--accent-pink);
+            text-shadow: 2px 2px 0 rgba(255,255,255,0.8);
+            animation: feedbackFloat 1.5s ease-out;
+            opacity: 0;
+        }
+
+        @keyframes feedbackFloat {
+            0% {
+                transform: translateY(0) scale(0.5);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-50px) scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        /* Responsive design */
+        @media (max-width: 480px) {
+            .app-container {
+                max-width: 100%;
+            }
+            
+            .typing-text {
+                font-size: 1.1rem;
+                min-height: 80px;
+            }
+            
+            .mood-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .audio-player-container {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating emojis for background -->
+    <div class="emoji" style="top: 10%; left: 5%;">💖</div>
+    <div class="emoji" style="top: 20%; left: 80%;">✨</div>
+    <div class="emoji" style="top: 40%; left: 15%;">💌</div>
+    <div class="emoji" style="top: 70%; left: 75%;">🌸</div>
+    <div class="emoji" style="top: 85%; left: 20%;">🎵</div>
+    <div class="emoji" style="top: 30%; left: 60%;">🎶</div>
+    
+    <div class="app-container">
+        <div class="app-header">
+            <button class="back-button" id="back-button">🔙</button>
+            <h1>dd iyang Music</h1>
+        </div>
+        
+        <div class="app-content">
+            <!-- Home Page -->
+            <div id="home-page" class="page active">
+                <div class="welcome-container">
+                    <div class="typing-text" id="typing-text"></div>
+                    
+                    <div class="now-playing">
+                        <div class="now-playing-cover">
+                            <img src="https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228" alt="Album Cover">
+                        </div>
+                        <div class="now-playing-info">
+                            <h3>I Like U</h3>
+                            <p>NIKI • Playing now</p>
+                        </div>
+                        <div class="now-playing-controls">
+                            <button><i class="fas fa-step-backward"></i></button>
+                            <button><i class="fas fa-pause"></i></button>
+                            <button><i class="fas fa-step-forward"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="daily-message">
+                        <div class="daily-message-content">
+                            kaka sayang dede ndak? 💌
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Search Page -->
+            <div id="search-page" class="page">
+                <div class="search-container">
+                    <div class="search-box">
+                        <input type="text" placeholder="Search for songs, artists...">
+                        <button><i class="fas fa-search"></i></button>
+                    </div>
+                    
+                    <div class="search-suggestions">
+                        <div class="search-bubble">lagu buat kaka kemal</div>
+                        <div class="search-bubble">kaka kemal handsome</div>
+                        <div class="search-bubble">KOK KAKA KEMAL LUCU BANGET</div>
+                        <div class="search-bubble">lagu buat dedek iyang</div>
+                        <div class="search-bubble">bucin playlist</div>
+                        <div class="search-bubble">songs that remind me of kaka</div>
+                    </div>
+                    
+                    <div class="mood-playlists">
+                        <h3 class="mood-title">Mood Playlists</h3>
+                        <div class="mood-grid">
+                            <div class="mood-card" data-mood="soft-girl">
+                                <i class="fas fa-cloud-moon"></i>
+                                <h3>Soft Girl Hours</h3>
+                            </div>
+                            <div class="mood-card" data-mood="sweet-clingy">
+                                <i class="fas fa-heart"></i>
+                                <h3>Sweet But Clingy</h3>
+                            </div>
+                            <div class="mood-card" data-mood="sound-like-you">
+                                <i class="fas fa-music"></i>
+                                <h3>Songs That Sound Like You</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Playlist Page -->
+            <div id="playlist-page" class="page">
+                <div class="playlist-header">
+                    <i class="fas fa-music"></i>
+                    <h2>Fall in Love Playlist</h2>
+                </div>
+                
+                <div class="songs-list">
+                    <!-- Taylor Swift songs -->
+                    <div class="song-card" data-song="Fearless" data-artist="Taylor Swift" data-cover="https://i.scdn.co/image/ab67616d00001e02112c3d72d0fd88f805a82e09" data-audio="fearless.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02112c3d72d0fd88f805a82e09" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>Fearless</h3>
+                            <p>Taylor Swift</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <div class="song-card" data-song="The Way I Loved You" data-artist="Taylor Swift" data-cover="https://i.scdn.co/image/ab67616d00001e02112c3d72d0fd88f805a82e09" data-audio="the_way_i_loved_you.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02112c3d72d0fd88f805a82e09" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>The Way I Loved You</h3>
+                            <p>Taylor Swift</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <!-- Additional love songs -->
+                    <div class="song-card" data-song="I Like U" data-artist="NIKI" data-cover="likee.jpg" data-audio="i_like_u.mp3">
+                        <div class="album-art"><img src="like.mp3" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>I Like U</h3>
+                            <p>NIKI</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <div class="song-card" data-song="Take a Chance With Me" data-artist="NIKI" data-cover="nikii.jpg" data-audio="take_a_chance.mp3">
+                        <div class="album-art"><img src="niki.mp3"></div>
+                        <div class="song-info">
+                            <h3>Take a Chance With Me</h3>
+                            <p>NIKI</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <div class="song-card" data-song="I Want U" data-artist="Stephen Sanchez" data-cover="wantt.jpg" data-audio="i_want_u.mp3">
+                        <div class="album-art"><img src="want" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>I Want U</h3>
+                            <p>PinkPantheress</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <div class="song-card" data-song="I Love You 3000" data-artist="Stephanie Poetri" data-cover="https://i.scdn.co/image/ab67616d00001e02e1a5e8b7e8c5e5d5b5e5f5e5" data-audio="i_love_you_3000.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02e1a5e8b7e8c5e5d5b5e5f5e5" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>I Love You 3000</h3>
+                            <p>Stephanie Poetri</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <div class="song-card" data-song="I'm in Love With You" data-artist="The 1975" data-cover="https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228" data-audio="in_love_with_you.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>I'm in Love With You</h3>
+                            <p>The 1975</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <div class="song-card" data-song="Still Into You" data-artist="Paramore" data-cover="https://i.scdn.co/image/ab67616d00001e02a3a0d58a5cacd8c5a0f4c8a5" data-audio="still_into_you.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02a3a0d58a5cacd8c5a0f4c8a5" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>Still Into You</h3>
+                            <p>Paramore</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <div class="song-card" data-song="Love You Like That" data-artist="Dagny" data-cover="https://i.scdn.co/image/ab67616d00001e02a3a0d58a5cacd8c5a0f4c8a5" data-audio="love_you_like_that.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02a3a0d58a5cacd8c5a0f4c8a5" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>Love You Like That</h3>
+                            <p>Dagny</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <div class="song-card" data-song="Until I Found You" data-artist="Stephen Sanchez" data-cover="https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228" data-audio="until_i_found_you.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>Until I Found You</h3>
+                            <p>Stephen Sanchez</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <div class="song-card" data-song="Falling for U" data-artist="Peachy! ft. mxmtoon" data-cover="https://i.scdn.co/image/ab67616d00001e02a3a0d58a5cacd8c5a0f4c8a5" data-audio="falling_for_u.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02a3a0d58a5cacd8c5a0f4c8a5" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>Falling for U</h3>
+                            <p>Peachy! ft. mxmtoon</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mood Playlist Pages -->
+            <div id="soft-girl-playlist" class="mood-playlist-page" style="background-color: #f8e1f4;">
+                <div class="mood-header" style="background: linear-gradient(to right, #f8e1f4, #e1e8f8);">
+                    <i class="fas fa-cloud-moon"></i>
+                    <h2>Soft Girl Hours</h2>
+                </div>
+                
+                <div class="mood-songs-list">
+                    <div class="song-card" data-song="I Love You 3000" data-artist="Stephanie Poetri" data-cover="https://i.scdn.co/image/ab67616d00001e02e1a5e8b7e8c5e5d5b5e5f5e5" data-audio="i_love_you_3000.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02e1a5e8b7e8c5e5d5b5e5f5e5" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>I Love You 3000</h3>
+                            <p>Stephanie Poetri</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <div class="song-card" data-song="i wanna be yours" data-artist="artics monkey" data-cover="https://i.scdn.co/image/ab67616d00001e02a3a0d58a5cacd8c5a0f4c8a5" data-audio="i_wanna_be_yours.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02a3a0d58a5cacd8c5a0f4c8a5" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>Falling for U</h3>
+                            <p>Peachy! ft. mxmtoon</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="sweet-clingy-playlist" class="mood-playlist-page" style="background-color: #e1f8f1;">
+                <div class="mood-header" style="background: linear-gradient(to right, #e1f8f1, #f8f1e1);">
+                    <i class="fas fa-heart"></i>
+                    <h2>Sweet But Clingy</h2>
+                </div>
+                
+                <div class="mood-songs-list">
+                    <div class="song-card" data-song="I'm in Love With You" data-artist="The 1975" data-cover="https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228" data-audio="in_love_with_you.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>I'm in Love With You</h3>
+                            <p>The 1975</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <div class="song-card" data-song="Still Into You" data-artist="Paramore" data-cover="https://i.scdn.co/image/ab67616d00001e02a3a0d58a5cacd8c5a0f4c8a5" data-audio="still_into_you.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02a3a0d58a5cacd8c5a0f4c8a5" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>Still Into You</h3>
+                            <p>Paramore</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="sound-like-you-playlist" class="mood-playlist-page" style="background-color: #e1e8f8;">
+                <div class="mood-header" style="background: linear-gradient(to right, #e1e8f8, #f8e1f4);">
+                    <i class="fas fa-music"></i>
+                    <h2>Songs That Sound Like You</h2>
+                </div>
+                
+                <div class="mood-songs-list">
+                    <div class="song-card" data-song="Until I Found You" data-artist="Stephen Sanchez" data-cover="https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228" data-audio="until_i_found_you.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>Until I Found You</h3>
+                            <p>Stephen Sanchez</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                    
+                    <div class="song-card" data-song="Love You Like That" data-artist="Dagny" data-cover="https://i.scdn.co/image/ab67616d00001e02a3a0d58a5cacd8c5a0f4c8a5" data-audio="love_you_like_that.mp3">
+                        <div class="album-art"><img src="https://i.scdn.co/image/ab67616d00001e02a3a0d58a5cacd8c5a0f4c8a5" alt="Album Cover"></div>
+                        <div class="song-info">
+                            <h3>Love You Like That</h3>
+                            <p>Dagny</p>
+                        </div>
+                        <button class="play-btn"><i class="fas fa-play"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Now Playing Bar -->
+        <div class="player-bar">
+            <div class="player-art"><img src="" alt="Album Cover" id="player-cover"></div>
+            <div class="player-info">
+                <h4 id="player-title">No song playing</h4>
+                <p id="player-artist">Select a song to play</p>
+            </div>
+            <div class="player-controls">
+                <button id="prev-btn"><i class="fas fa-step-backward"></i></button>
+                <button id="player-play-btn"><i class="fas fa-play"></i></button>
+                <button id="next-btn"><i class="fas fa-step-forward"></i></button>
+            </div>
+        </div>
+        
+        <!-- Audio Player -->
+        <audio id="audio-player" class="audio-player-container"></audio>
+        
+        <!-- Navigation Bar -->
+        <div class="nav-bar">
+            <a href="#" class="nav-item active" data-page="home-page">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="#" class="nav-item" data-page="search-page">
+                <i class="fas fa-search"></i>
+                <span>Search</span>
+            </a>
+            <a href="#" class="nav-item" data-page="playlist-page">
+                <i class="fas fa-music"></i>
+                <span>Playlist</span>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Player state
+            const playerState = {
+                currentSongIndex: -1,
+                isPlaying: false,
+                audioPlayer: null,
+                songs: [],
+                currentPlaylist: []
+            };
+
+            // Navigation functionality
+            const navItems = document.querySelectorAll('.nav-item');
+            const pages = document.querySelectorAll('.page');
+            const moodPages = document.querySelectorAll('.mood-playlist-page');
+            const playerBar = document.querySelector('.player-bar');
+            const backButton = document.getElementById('back-button');
+            let currentPage = 'home-page';
+            let previousPage = '';
+            
+            // Player elements
+            const playerTitle = document.getElementById('player-title');
+            const playerArtist = document.getElementById('player-artist');
+            const playerCover = document.getElementById('player-cover');
+            const playerPlayBtn = document.getElementById('player-play-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const audioPlayer = document.getElementById('audio-player');
+
+            // Initialize songs
+            function initializeSongs() {
+                // Main playlist songs
+                const playlistSongs = Array.from(document.querySelectorAll('#playlist-page .song-card')).map((card, index) => ({
+                    element: card,
+                    title: card.getAttribute('data-song'),
+                    artist: card.getAttribute('data-artist'),
+                    cover: card.getAttribute('data-cover'),
+                    audio: card.getAttribute('data-audio'),
+                    index: index
+                }));
+
+                // Mood playlist songs
+                const softGirlSongs = Array.from(document.querySelectorAll('#soft-girl-playlist .song-card')).map((card, index) => ({
+                    element: card,
+                    title: card.getAttribute('data-song'),
+                    artist: card.getAttribute('data-artist'),
+                    cover: card.getAttribute('data-cover'),
+                    audio: card.getAttribute('data-audio'),
+                    index: index,
+                    playlist: 'soft-girl'
+                }));
+
+                const sweetClingySongs = Array.from(document.querySelectorAll('#sweet-clingy-playlist .song-card')).map((card, index) => ({
+                    element: card,
+                    title: card.getAttribute('data-song'),
+                    artist: card.getAttribute('data-artist'),
+                    cover: card.getAttribute('data-cover'),
+                    audio: card.getAttribute('data-audio'),
+                    index: index,
+                    playlist: 'sweet-clingy'
+                }));
+
+                const soundLikeYouSongs = Array.from(document.querySelectorAll('#sound-like-you-playlist .song-card')).map((card, index) => ({
+                    element: card,
+                    title: card.getAttribute('data-song'),
+                    artist: card.getAttribute('data-artist'),
+                    cover: card.getAttribute('data-cover'),
+                    audio: card.getAttribute('data-audio'),
+                    index: index,
+                    playlist: 'sound-like-you'
+                }));
+
+                playerState.songs = [
+                    ...playlistSongs,
+                    ...softGirlSongs,
+                    ...sweetClingySongs,
+                    ...soundLikeYouSongs
+                ];
+
+                // Set current playlist to main playlist by default
+                playerState.currentPlaylist = playlistSongs;
+            }
+
+            // Set active page
+            function setActivePage(pageId) {
+                // If trying to go to same page, do nothing
+                if (pageId === currentPage) return;
+                
+                // Store previous page for back button
+                if (!pageId.includes('playlist')) {
+                    previousPage = currentPage;
+                }
+                
+                // Hide all pages
+                pages.forEach(page => {
+                    page.classList.remove('active');
+                });
+                
+                moodPages.forEach(page => {
+                    page.classList.remove('active');
+                });
+                
+                // Show selected page
+                const newPage = document.getElementById(pageId);
+                if (newPage) {
+                    newPage.classList.add('active');
+                    currentPage = pageId;
+                    
+                    // Show/hide back button
+                    if (pageId.includes('playlist')) {
+                        backButton.style.display = 'block';
+                    } else {
+                        backButton.style.display = 'none';
+                    }
+
+                    // Update current playlist based on page
+                    if (pageId === 'playlist-page') {
+                        playerState.currentPlaylist = playerState.songs.filter(song => !song.playlist);
+                    } else if (pageId === 'soft-girl-playlist') {
+                        playerState.currentPlaylist = playerState.songs.filter(song => song.playlist === 'soft-girl');
+                    } else if (pageId === 'sweet-clingy-playlist') {
+                        playerState.currentPlaylist = playerState.songs.filter(song => song.playlist === 'sweet-clingy');
+                    } else if (pageId === 'sound-like-you-playlist') {
+                        playerState.currentPlaylist = playerState.songs.filter(song => song.playlist === 'sound-like-you');
+                    }
+                }
+            }
+            
+            // Add click event to nav items
+            navItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const pageId = this.getAttribute('data-page');
+                    setActivePage(pageId);
+                    
+                    // Add feedback effect
+                    createFeedback(this, 'Nice!', 'var(--accent-pink)');
+                });
+            });
+            
+            // Back button functionality
+            backButton.addEventListener('click', function() {
+                if (previousPage) {
+                    setActivePage(previousPage);
+                    createFeedback(this, 'Back!', 'var(--accent-blue)');
+                }
+            });
+            
+            // Mood cards functionality
+            const moodCards = document.querySelectorAll('.mood-card');
+            moodCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const mood = this.getAttribute('data-mood');
+                    setActivePage(`${mood}-playlist`);
+                    
+                    // Create floating hearts
+                    for (let i = 0; i < 5; i++) {
+                        createHeart(this);
+                    }
+                    
+                    createFeedback(this, 'Mood!', 'var(--accent-purple)');
+                });
+            });
+            
+            // Play song function
+            function playSong(songIndex) {
+                const song = playerState.currentPlaylist[songIndex];
+                
+                if (!song) return;
+                
+                // Update player state
+                playerState.currentSongIndex = songIndex;
+                playerState.isPlaying = true;
+                
+                // Update player bar
+                playerTitle.textContent = song.title;
+                playerArtist.textContent = song.artist;
+                playerCover.src = song.cover;
+                
+                // Show player bar if hidden
+                playerBar.classList.add('active');
+                
+                // Update play buttons
+                updatePlayButtons();
+                
+                // Set audio source and play
+                audioPlayer.src = song.audio;
+                audioPlayer.play().catch(error => {
+                    console.log("Autoplay prevented:", error);
+                });
+                
+                // Add visual feedback
+                createMusicNotes(song.element.querySelector('.play-btn'));
+                createFeedback(song.element.querySelector('.play-btn'), 'Playing!', 'var(--accent-pink)');
+            }
+            
+            // Pause song function
+            function pauseSong() {
+                playerState.isPlaying = false;
+                audioPlayer.pause();
+                updatePlayButtons();
+            }
+            
+            // Toggle play/pause
+            function togglePlayPause() {
+                if (playerState.currentSongIndex === -1) {
+                    // If no song is selected, play the first song
+                    playSong(0);
+                } else if (playerState.isPlaying) {
+                    pauseSong();
+                } else {
+                    audioPlayer.play();
+                    playerState.isPlaying = true;
+                    updatePlayButtons();
+                }
+            }
+            
+            // Play next song
+            function playNextSong() {
+                if (playerState.currentPlaylist.length === 0) return;
+                
+                const nextIndex = (playerState.currentSongIndex + 1) % playerState.currentPlaylist.length;
+                playSong(nextIndex);
+                createFeedback(nextBtn, 'Next!', 'var(--accent-blue)');
+            }
+            
+            // Play previous song
+            function playPrevSong() {
+                if (playerState.currentPlaylist.length === 0) return;
+                
+                const prevIndex = (playerState.currentSongIndex - 1 + playerState.currentPlaylist.length) % playerState.currentPlaylist.length;
+                playSong(prevIndex);
+                createFeedback(prevBtn, 'Prev!', 'var(--accent-purple)');
+            }
+            
+            // Update all play buttons
+            function updatePlayButtons() {
+                const playButtons = document.querySelectorAll('.play-btn');
+                playButtons.forEach(button => {
+                    const icon = button.querySelector('i');
+                    icon.classList.remove('fa-play', 'fa-pause');
+                    
+                    const songCard = button.closest('.song-card');
+                    const currentSong = playerState.currentPlaylist[playerState.currentSongIndex];
+                    
+                    if (currentSong && songCard === currentSong.element && playerState.isPlaying) {
+                        icon.classList.add('fa-pause');
+                    } else {
+                        icon.classList.add('fa-play');
+                    }
+                });
+                
+                // Update main player button
+                const playerIcon = playerPlayBtn.querySelector('i');
+                playerIcon.classList.remove('fa-play', 'fa-pause');
+                playerIcon.classList.add(playerState.isPlaying ? 'fa-pause' : 'fa-play');
+            }
+            
+            // Play button functionality
+            const playButtons = document.querySelectorAll('.play-btn');
+            playButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const songCard = this.closest('.song-card');
+                    
+                    // Find the song in our state
+                    const songIndex = playerState.currentPlaylist.findIndex(song => song.element === songCard);
+                    
+                    if (songIndex !== -1) {
+                        if (playerState.currentSongIndex === songIndex && playerState.isPlaying) {
+                            pauseSong();
+                        } else {
+                            playSong(songIndex);
+                        }
+                    }
+                });
+            });
+            
+            // Player controls
+            playerPlayBtn.addEventListener('click', function() {
+                togglePlayPause();
+                createFeedback(this, playerState.isPlaying ? 'Playing!' : 'Paused!', 'var(--accent-purple)');
+            });
+            
+            prevBtn.addEventListener('click', playPrevSong);
+            nextBtn.addEventListener('click', playNextSong);
+            
+            // Handle audio ended event
+            audioPlayer.addEventListener('ended', function() {
+                playNextSong();
+            });
+            
+            // Typing effect
+            const typingText = document.getElementById('typing-text');
+            const messages = [
+                "You're not my song, but somehow you're stuck in my head.",
+                "If you were a song, you'd be my favorite melody.",
+                "My heart plays your name on repeat.",
+                "You're the chorus I never want to end.",
+                "I'd listen to your voice forever."
+            ];
+            let messageIndex = 0;
+            let charIndex = 0;
+            let isDeleting = false;
+            let typingSpeed = 100;
+            
+            function typeWriter() {
+                const currentMessage = messages[messageIndex];
+                
+                if (isDeleting) {
+                    typingText.textContent = currentMessage.substring(0, charIndex - 1);
+                    charIndex--;
+                    typingSpeed = 50;
+                } else {
+                    typingText.textContent = currentMessage.substring(0, charIndex + 1);
+                    charIndex++;
+                    typingSpeed = 100;
+                }
+                
+                if (!isDeleting && charIndex === currentMessage.length) {
+                    isDeleting = true;
+                    typingSpeed = 1500; // Pause at end
+                } else if (isDeleting && charIndex === 0) {
+                    isDeleting = false;
+                    messageIndex = (messageIndex + 1) % messages.length;
+                    typingSpeed = 500; // Pause before typing next
+                }
+                
+                setTimeout(typeWriter, typingSpeed);
+            }
+            
+            // Initialize the app
+            function init() {
+                // Start typing effect
+                setTimeout(typeWriter, 1000);
+                
+                // Initialize songs
+                initializeSongs();
+                
+                // Create emojis periodically
+                setInterval(createFloatingEmoji, 2000);
+                
+                // Initialize with a few emojis
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(createFloatingEmoji, i * 500);
+                }
+            }
+            
+            // Helper functions for animations
+            function createSparkle(x, y) {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                sparkle.style.left = x - 5 + 'px';
+                sparkle.style.top = y - 5 + 'px';
+                document.body.appendChild(sparkle);
+                
+                setTimeout(() => {
+                    sparkle.remove();
+                }, 1000);
+            }
+            
+            function createHeart(element) {
+                const rect = element.getBoundingClientRect();
+                const heart = document.createElement('div');
+                heart.className = 'heart';
+                heart.style.left = rect.left + (rect.width / 2) + 'px';
+                heart.style.top = rect.top + (rect.height / 2) + 'px';
+                heart.textContent = '💖';
+                document.body.appendChild(heart);
+                
+                setTimeout(() => {
+                    heart.remove();
+                }, 4000);
+            }
+            
+            function createMusicNotes(element) {
+                const rect = element.getBoundingClientRect();
+                for (let i = 0; i < 3; i++) {
+                    const note = document.createElement('div');
+                    note.className = 'music-note';
+                    note.style.left = rect.right + 'px';
+                    note.style.top = rect.top + 'px';
+                    note.style.animationDelay = (i * 0.2) + 's';
+                    note.textContent = '♪';
+                    document.body.appendChild(note);
+                    
+                    setTimeout(() => {
+                        note.remove();
+                    }, 3000);
+                }
+            }
+            
+            function createFeedback(element, text, color) {
+                const rect = element.getBoundingClientRect();
+                const feedback = document.createElement('div');
+                feedback.className = 'feedback';
+                feedback.textContent = text;
+                feedback.style.color = color;
+                feedback.style.left = rect.left + (rect.width / 2) + 'px';
+                feedback.style.top = rect.top + 'px';
+                document.body.appendChild(feedback);
+                
+                setTimeout(() => {
+                    feedback.remove();
+                }, 1500);
+            }
+            
+            function createFloatingEmoji() {
+                const emojiContainer = document.body;
+                const emojis = ['💖', '✨', '💌', '🌸', '🎵', '🎶', '💕', '🌟'];
+                
+                const emoji = document.createElement('div');
+                emoji.className = 'emoji';
+                emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                
+                // Random position
+                const leftPos = Math.random() * 100;
+                emoji.style.left = `${leftPos}%`;
+                emoji.style.top = '110%'; // Start from below screen
+                
+                // Random animation duration and delay
+                const duration = 15 + Math.random() * 20;
+                const delay = Math.random() * 5;
+                emoji.style.animationDuration = `${duration}s`;
+                emoji.style.animationDelay = `${delay}s`;
+                
+                emojiContainer.appendChild(emoji);
+                
+                // Remove emoji after animation completes
+                setTimeout(() => {
+                    emoji.remove();
+                }, (duration + delay) * 1000);
+            }
+            
+            // Create sparkle effect on click
+            document.addEventListener('click', function(e) {
+                createSparkle(e.clientX, e.clientY);
+            });
+            
+            // Initialize the app
+            init();
+        });
+    </script>
+</body>
+</html>
